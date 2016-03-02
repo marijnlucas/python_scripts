@@ -26,11 +26,12 @@
 #version5.4(20160224): ajout d'une ligne pour afficher le nombre de lignes de la matrice des données dans le terminal
 #version5.5(20160224): traduction des message affichés en anglais et amélioration du suivi de traitement des .dat
 #version5.6(20160225): possibilité de changer la taille de police des différentes légendes + format image sauvegardée
+#version5.7(20160302): ajout du choix tu type de courbe + possibilité de tracer en noir et blanc (pour scatter)
 
 ############### AMELIORATIONS POSSIBLES ###############
 # utilisation de l'option '0' en id courbe pour appliquer offset à toutes les courbes pour la colonne souhaitée
 # utilisation de la fonction interpolation de scipy pour manipuler des fonctions plutôt que des matrices de données
-# proposer différentes options pour tracer des courbes: nuage de points, lignes, couleurs différentes ou formes différentes, ...
+# améliorer le scatter en mode noir et blanc.
 
 from scipy import *
 from pylab import *
@@ -42,29 +43,31 @@ import glob, inspect, os
 ################## PEUT ETRE MODIFIE ##################
 ##################VVVVVVVVVVVVVVVVVVV##################
 
+#informations relatives aux fichiers de données
 extension='.dat'	#extension des fichiers à considérer pour tracer les courbes (inclure le .)
-print_graph='non'	#'oui'/'non' pour générer ou non une copie
-image_fmt='pdf'		#format of the image if saved ('pdf', 'png')
 delimiteur=''		#rien par default
 tracer=[0]			#tout tracer: 0, sinon liste [1,2,3,5,8,...] AVEC CROCHETS
-
-#informations relatives aux fichiers de données
-data_set_up=5	#nombre de premières lignes ignorées dans le fichier de données .dat
-data_set_low=0	#nombre de dernières lignes ignorées dans le fichier de données .dat
-data_x_axis=1	#colonne de données correspondant aux abscisses
-data_y_axis=[4]	#colonne(s) de données correspondant aux ordonnées (garder les crochets)
-col_freq=6		#colonne où est indiquée la fréquence des mesures
-col_amp=8		#colonne où est indiquée l'amplitude des mesures
-unit_amp='V'	#unité de l'amplitude du signal en entrée
+data_set_up=5		#nombre de premières lignes ignorées dans le fichier de données .dat
+data_set_low=0		#nombre de dernières lignes ignorées dans le fichier de données .dat
+data_x_axis=1		#colonne de données correspondant aux abscisses
+data_y_axis=[4]		#colonne(s) de données correspondant aux ordonnées (garder les crochets)
+col_freq=6			#colonne où est indiquée la fréquence des mesures
+col_amp=8			#colonne où est indiquée l'amplitude des mesures
+unit_amp='V'		#unité de l'amplitude du signal en entrée
 
 #informations relatives aux tracés
+type="scatter"		#type of plots ("scatter"/"plot")
+bw="no"			#output in black and white ("yes"/"no") - pas au point
+print_graph='non'	#'oui'/'non' pour générer ou non une copie
+image_fmt='pdf'		#format of the image if saved ('pdf', 'png')
+fig_width=15		#largeur fenêtre des graphes en pouces
+fig_height=8		#hauteur fenêtre des graphes en pouces
+my_dpi=80			#dots per inch de l'écran
+grille='oui'
+
 titref="default title: x-axis --> column " +str(data_x_axis) + " y-axis --> column " +str(data_y_axis) + " of " + extension + " files in folder"
 nom_axe_x='Temperature (K)'
 nom_axe_y='Magnitude (V)'
-grille='oui'
-fig_width=20	#largeur fenêtre des graphes en pouces
-fig_height=15	#hauteur fenêtre des graphes en pouces
-my_dpi=80		#dots per inch de l'écran
 font_legend=10	#legend font size
 font_axis=12	#axis font size
 font_title=15	#title font size
@@ -234,6 +237,15 @@ for i in tracer:
 # et on prend le min et max de yscale_low/up
 yscale_low=min(yscale_low)
 yscale_up=max(yscale_up)
+
+######## SCATTER MARKERS ########
+markers = ["+",".","1","*",">","2","d","3","4","<","v","^","o","s"]
+
+if bw=="yes" or  bw=="YES"or  bw=="Yes" or  bw=="Y" or  bw=="y":
+	colors = ["k","0.7","0.4","0.1"]
+else:
+	colors = ["b","g","r","c","m","y","k","0.7","0.4","0.1"]
+
 	
 ######## TRAÇAGE COURBES ########
 print("\n---> CREATION OF PLOT OBJECTS :")			
@@ -254,8 +266,15 @@ for i in tracer:
 		else:
 			label_courbe='graph '+str(tracer.index(i)+1)+'(col '+str(j)+'): '+decoupage[len(decoupage)-1]+'\n ---> f='+str(donnees_exp[0,0])+'Hz | Vo='+str(donnees_exp[1,0])+unit_amp
 	
-		plt.plot(x,y,label=label_courbe) #on trace la courbe pour i
-		print("     creation of plot object for graph", i, "|column", j, " - SUCCESS")	
+		if type=="scatter":
+			if bw=="yes" or  bw=="YES"or  bw=="Yes" or  bw=="Y" or  bw=="y":
+				plt.scatter(x,y,label=label_courbe, s=15, color=colors[data_y_axis.index(j)%len(colors)], marker=markers[tracer.index(i)%len(markers)]) #on trace la courbe pour i en mode nuage de points/noir et blanc
+			else:
+				plt.scatter(x,y,label=label_courbe, s=15, color=colors[tracer.index(i)%len(colors)], marker=markers[data_y_axis.index(j)%len(markers)]) #on trace la courbe pour i en mode nuage de points/couleurs
+		else:
+			plt.plot(x,y,label=label_courbe) #on trace la courbe pour i en mode ligne continue
+			
+		print("     creation of ",type, " object for graph", i, "|column", j, " - SUCCESS")	
 	
 	
 	
